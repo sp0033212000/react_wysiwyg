@@ -13,6 +13,7 @@ import classNames from "classnames";
 import {
   createLinkEntity,
   getEntitiesFromSelection,
+  getSelectionStateByRange,
   getSvgUrl,
   getURLFromLinkEntity,
   isSelectionInRange,
@@ -185,7 +186,7 @@ const Toolbar: React.FC<{
     if (isSelectionInLink.inLink) {
       const entity = isSelectionInLink.entity;
       if (!entity) return;
-      const entitySelection = entity.entity.getData().selectionState;
+      const entitySelection = getSelectionStateByRange(editorState, entity);
       if (url.length === 0) {
         setEditorState(
           RichUtils.toggleLink(editorState, entitySelection, null)
@@ -194,19 +195,24 @@ const Toolbar: React.FC<{
         editLinkEntity(editorState, {
           entityKey: entity.entityKey,
           url,
-          selectionState: entity.entity.getData().selectionState,
+          selectionState: entitySelection,
         });
       }
     } else {
       if (url.length === 0) {
         return;
       } else {
-        setEditorState(
-          createLinkEntity(editorState, editorState.getSelection(), url)
-        );
+        setEditorState(createLinkEntity(editorState, url));
       }
     }
   };
+
+  (() => {
+    const content = editorState.getCurrentContent();
+    const selection = editorState.getSelection();
+    const blockKey = selection.getStartKey();
+    console.log(blockKey);
+  })();
 
   return (
     <div

@@ -6,6 +6,7 @@ import {
   RichUtils,
   SelectionState,
 } from "draft-js";
+import Immutable from "immutable";
 
 type SVGId =
   | "link"
@@ -23,14 +24,27 @@ export function getSvgUrl(svgId: SVGId): object {
 
 export const createLinkEntity = (
   editorState: EditorState,
-  selectionState: SelectionState,
   url: string
 ): EditorState => {
   if (url.length === 0) return editorState;
-  const contentState = editorState.getCurrentContent();
+  let contentState = editorState.getCurrentContent();
+  let selectionState = editorState.getSelection();
+
+  if (selectionState.getStartOffset() === selectionState.getEndOffset()) {
+    selectionState = getSelectionStateByRange(editorState, {
+      start: selectionState.getAnchorOffset(),
+      end: selectionState.getAnchorOffset() + 4,
+    });
+    contentState = Modifier.insertText(
+      contentState,
+      editorState.getSelection(),
+      "Link",
+      Immutable.OrderedSet(["INSERT"])
+    );
+  }
+
   const contentStateWithEntity = contentState.createEntity("LINK", "MUTABLE", {
     url,
-    selectionState: selectionState,
   });
   const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
   const contentStateWithLink = Modifier.applyEntity(
@@ -184,4 +198,24 @@ export const isEqual = (...args: any[]): boolean => {
     else return false;
   }
   return equal;
+};
+
+export const getSelectionStateByRange = (
+  editorState: EditorState,
+  entity: Range
+) => {
+  const selection = editorState.getSelection();
+  const content = editorState.getCurrentContent();
+  const selectionKey = selection.getAnchorKey();
+  const block = content.getBlockForKey(selectionKey);
+  const blockKey = block.getKey();
+
+  return new SelectionState({
+    anchorOffset: entity.start,
+    anchorKey: blockKey,
+    focusOffset: entity.end,
+    focusKey: blockKey,
+    isBackward: false,
+    hasFocus: selection.getHasFocus(),
+  });
 };
